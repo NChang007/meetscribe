@@ -25,9 +25,10 @@ macOS CLI: stereo mic+system capture â†’ FluidAudio diarization + Parakeet ASR â
 cd meetscribe
 swift build -c release --disable-sandbox
 install -m 755 .build/release/meetscribe ~/.local/bin/meetscribe
-export PATH="$HOME/.local/bin:$PATH"
 meetscribe init
 ```
+
+The curl installer adds `~/.local/bin` to your shell profile automatically.
 
 Skip model download (~1GB): `MEETSCRIBE_SKIP_MODELS=1 meetscribe init`
 
