@@ -187,6 +187,5 @@ fi
 
 echo ""
 echo "Next steps:"
-echo "  meetscribe doctor"
-echo "  meetscribe permissions"
 echo "  meetscribe record start --title \"My meeting\""
+echo "  (permissions are requested automatically on first record)"

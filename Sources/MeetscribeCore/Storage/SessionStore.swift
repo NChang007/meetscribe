@@ -86,6 +86,7 @@ public final class SessionStore: @unchecked Sendable {
         calendarEventId: String? = nil
     ) throws -> RecordingSession {
         try FileManager.default.createDirectory(at: sessionsRoot, withIntermediateDirectories: true)
+        try reconcileActiveRecordingLock()
 
         if let activeId = try activeRecordingID() {
             throw SessionStoreError.sessionAlreadyRecording(activeId)
@@ -115,6 +116,37 @@ public final class SessionStore: @unchecked Sendable {
         var session = try load(id: id)
         session.status = .failed
         try save(session)
+    }
+
+    /// Clears a stale `.active-recording` lock after a failed or interrupted start.
+    public func abortRecordingSession(id: String) throws {
+        if try activeRecordingID() == id {
+            try clearActiveRecording()
+        }
+        if (try? load(id: id)) != nil {
+            try markFailed(id: id)
+        }
+    }
+
+    /// Drops `.active-recording` when no live recording worker owns the session.
+    public func reconcileActiveRecordingLock() throws {
+        guard let activeId = try activeRecordingID() else { return }
+
+        let stateFile = sessionsRoot.appendingPathComponent(".recording-state.json")
+        if FileManager.default.fileExists(atPath: stateFile.path),
+           let data = try? Data(contentsOf: stateFile),
+           let state = try? JSONDecoder().decode(RecordingState.self, from: data),
+           state.sessionId == activeId,
+           kill(state.pid, 0) == 0 {
+            return
+        }
+
+        try clearActiveRecording()
+        if var session = try? load(id: activeId), session.status == .recording {
+            session.status = .failed
+            session.endedAt = Date()
+            try save(session)
+        }
     }
 
     public func activeRecordingID() throws -> String? {

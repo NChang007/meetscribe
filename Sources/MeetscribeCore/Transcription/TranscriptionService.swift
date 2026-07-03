@@ -9,7 +9,9 @@ public struct TranscriptionService: Sendable {
         let segments: [TranscriptSegment]
         if FileManager.default.fileExists(atPath: resolvedURL.path) {
             let data = try Data(contentsOf: resolvedURL)
-            let resolved = try JSONDecoder().decode(ResolvedTranscript.self, from: data)
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            let resolved = try decoder.decode(ResolvedTranscript.self, from: data)
             segments = resolved.segments
         } else {
             segments = try TranscriptLoader.load(from: sessionStore.transcriptURL(for: session))

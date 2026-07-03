@@ -31,10 +31,15 @@ public enum ModelAvailability {
 
     /// Best-effort check: diarizer cache directory exists with compiled model artifacts.
     public static func diarizerModelsInstalled() -> Bool {
-        let directory = diarizerModelsDirectory()
-        let segmentation = directory
-            .appendingPathComponent(ModelNames.OfflineDiarizer.segmentationPath, isDirectory: false)
-        return FileManager.default.fileExists(atPath: segmentation.path)
+        let baseDirectory = diarizerModelsDirectory()
+        let segmentationName = ModelNames.OfflineDiarizer.segmentationPath
+        let candidatePaths = [
+            baseDirectory.appendingPathComponent(segmentationName),
+            baseDirectory.appendingPathComponent("speaker-diarization/\(segmentationName)"),
+            baseDirectory.appendingPathComponent("speaker-diarization-coreml/\(segmentationName)"),
+            baseDirectory.appendingPathComponent("speaker-diarization-offline/\(segmentationName)"),
+        ]
+        return candidatePaths.contains { FileManager.default.fileExists(atPath: $0.path) }
     }
 
     public static func statusSummary(language: MeetscribeConfig.LanguageCode) -> (asr: Bool, diarizer: Bool) {

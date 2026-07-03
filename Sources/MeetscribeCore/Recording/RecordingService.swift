@@ -40,6 +40,8 @@ public final class RecordingService: @unchecked Sendable {
             throw RecordingServiceError.alreadyRecording(state.sessionId)
         }
 
+        try await PermissionsChecker.ensureRecordingPermissions()
+
         let session = try sessionStore.createSession(
             title: title,
             attendees: attendees,
@@ -147,7 +149,17 @@ public final class RecordingService: @unchecked Sendable {
 
         let coordinator = RecordingCoordinator()
         self.coordinator = coordinator
-        try await coordinator.start(sessionStore: sessionStore, session: session)
+        do {
+            try await coordinator.start(sessionStore: sessionStore, session: session)
+        } catch {
+            levelMeterTask?.cancel()
+            levelMeterTask = nil
+            try? await coordinator.stop()
+            self.coordinator = nil
+            try? sessionStore.abortRecordingSession(id: session.id)
+            activeSession = nil
+            throw error
+        }
         installStopHandlers()
 
         while !shouldStop {

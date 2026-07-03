@@ -40,17 +40,17 @@ public enum DoctorService {
         checks.append(.init(
             name: "Accessibility",
             ok: permissions.accessibility,
-            detail: permissions.accessibility ? "Granted" : "System Settings → Privacy → Accessibility"
+            detail: permissions.accessibility ? "Granted" : "Run `meetscribe permissions` or `record start` to prompt"
         ))
         checks.append(.init(
             name: "Microphone",
             ok: permissions.microphone,
-            detail: permissions.microphone ? "Granted" : "System Settings → Privacy → Microphone"
+            detail: permissions.microphone ? "Granted" : "Run `meetscribe permissions` or `record start` to prompt"
         ))
         checks.append(.init(
             name: "Screen Recording",
             ok: permissions.screenRecording,
-            detail: permissions.screenRecording ? "Granted" : "Required for system audio — Privacy → Screen Recording"
+            detail: permissions.screenRecording ? "Granted" : "Required for system audio — prompted on record start"
         ))
         checks.append(.init(
             name: "gcalcli",
@@ -71,6 +71,9 @@ public enum DoctorService {
             ok: pendingReview == 0,
             detail: pendingReview == 0 ? "No pending voices" : "\(pendingReview) unlabeled speaker(s) — run `meetscribe speakers review`"
         ))
+
+        let sessionStore = SessionStore()
+        try? sessionStore.reconcileActiveRecordingLock()
 
         if let staleState = RecordingService.shared.staleRecordingState() {
             checks.append(.init(

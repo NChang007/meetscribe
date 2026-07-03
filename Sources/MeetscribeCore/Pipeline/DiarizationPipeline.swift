@@ -62,9 +62,6 @@ public final class DiarizationPipeline {
             try await manager.prepareModels()
             return
         }
-        guard ModelAvailability.diarizerModelsInstalled() else {
-            throw ModelAvailabilityError.modelsMissing("diarizer")
-        }
         let loadedModels = try await OfflineDiarizerModels.load(
             from: ModelAvailability.diarizerModelsDirectory()
         )

@@ -49,6 +49,14 @@ struct InitCommand: AsyncParsableCommand {
         } else {
             try await ModelBootstrap.ensureModels(config: config)
         }
+
+        await PermissionsChecker.requestMissingPermissions()
+        let permissions = PermissionsChecker.check()
+        if permissions.recordingReady {
+            print("Permissions: ready to record.")
+        } else {
+            print("Permissions: finish granting access before your first recording (meetscribe will prompt again on record start).")
+        }
     }
 }
 
@@ -610,6 +618,8 @@ struct WatchStartCommand: AsyncParsableCommand {
             throw ValidationError("Watch already running (pid \(existing.pid)). Stop with: meetscribe watch stop")
         }
 
+        try await PermissionsChecker.ensureRecordingPermissions()
+
         var config = try MeetscribeConfig.load()
         config.autoRecordEnabled = true
         try config.save()
@@ -661,22 +671,52 @@ struct WatchStatusCommand: ParsableCommand {
     }
 }
 
-struct PermissionsCommand: ParsableCommand {
-    static let configuration = CommandConfiguration(commandName: "permissions", abstract: "Check macOS permissions.")
+struct PermissionsCommand: AsyncParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "permissions",
+        abstract: "Request and check macOS permissions for recording."
+    )
 
-    @Flag(name: .long, help: "Prompt for Accessibility if missing.")
-    var prompt: Bool = false
+    @Flag(name: .long, help: "Check status only — do not show prompts or open System Settings.")
+    var checkOnly: Bool = false
 
-    func run() throws {
-        let status = PermissionsChecker.check(promptAccessibility: prompt)
-        print("Accessibility: \(status.accessibility ? "granted" : "missing")")
-        print("Microphone: \(status.microphone ? "granted" : "missing")")
-        print("Screen Recording: \(status.screenRecording ? "granted" : "missing — required for system audio")")
-        print("gcalcli: \(status.gcalcliInstalled ? "installed" : "missing — brew install gcalcli")")
-        print("Google Calendar (gcalcli): \(status.gcalcliAuthenticated ? "ready" : "run: gcalcli init")")
-        if !status.accessibility || !status.microphone || !status.screenRecording {
-            print("Open System Settings → Privacy & Security to grant missing permissions.")
+    func run() async throws {
+        if checkOnly {
+            printStatus(PermissionsChecker.check())
+            return
         }
+
+        try await PermissionsChecker.ensureRecordingPermissions()
+        printStatus(PermissionsChecker.check())
+        print("All recording permissions granted.")
+    }
+
+    private func printStatus(_ status: PermissionStatus) {
+        let host = PermissionsChecker.hostAppName()
+        print("Host app: \(host)")
+        print("Accessibility: \(status.accessibility ? "granted" : "missing")")
+        printPermission(
+            name: "Microphone",
+            granted: status.microphone,
+            deniedHint: "denied — enable \(host) in System Settings → Privacy & Security → Microphone"
+        )
+        print("Screen Recording: \(status.screenRecording ? "granted" : "missing — enable \(host) in Privacy & Security → Screen Recording")")
+        print("gcalcli: \(status.gcalcliInstalled ? "installed" : "missing — brew install gcalcli (optional)")")
+        print("Google Calendar (gcalcli): \(status.gcalcliAuthenticated ? "ready" : "optional — run: gcalcli init")")
+    }
+
+    private func printPermission(name: String, granted: Bool, deniedHint: String) {
+        if granted {
+            print("\(name): granted")
+            return
+        }
+        if name == "Microphone",
+           PermissionsChecker.microphoneAuthorizationStatus() == .denied
+            || PermissionsChecker.microphoneAuthorizationStatus() == .restricted {
+            print("\(name): \(deniedHint)")
+            return
+        }
+        print("\(name): missing")
     }
 }
 

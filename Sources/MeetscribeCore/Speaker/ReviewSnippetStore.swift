@@ -83,12 +83,15 @@ public enum ReviewSnippetStore {
                 .map(\.id)
         )
 
-        let globalToLocal = Dictionary(uniqueKeysWithValues: localToGlobal.map { ($1, $0) })
+        var globalToLocalIds: [String: [String]] = [:]
+        for (localSpeakerId, globalSpeakerId) in localToGlobal {
+            globalToLocalIds[globalSpeakerId, default: []].append(localSpeakerId)
+        }
         let unlabeledGlobals = Set(localToGlobal.values).subtracting(labeledIds)
 
         for globalSpeakerId in unlabeledGlobals {
-            guard let localSpeakerId = globalToLocal[globalSpeakerId] else { continue }
-            let segments = diarization.segments.filter { $0.localSpeakerId == localSpeakerId }
+            let localSpeakerIds = globalToLocalIds[globalSpeakerId] ?? []
+            let segments = diarization.segments.filter { localSpeakerIds.contains($0.localSpeakerId) }
             let picks = pickSegments(from: segments)
             guard !picks.isEmpty else { continue }
 
