@@ -46,11 +46,35 @@ Optional one-time model download runs during **`meetscribe init`** or **`curl | 
 
 ## Install
 
+**Recommended** — one command (downloads binary, configures PATH, runs `init`):
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/NChang007/meetscribe/main/scripts/install.sh | sh
 ```
 
-Or build from source:
+**Homebrew** — requires [Homebrew](https://brew.sh). Third-party taps must be trusted once (Homebrew 4.6+):
+
+```bash
+brew tap NChang007/meetscribe
+brew trust nchang007/meetscribe
+brew install meetscribe && meetscribe init
+```
+
+One line (first time on a Mac):
+
+```bash
+brew tap NChang007/meetscribe && brew trust nchang007/meetscribe && brew install meetscribe && meetscribe init
+```
+
+After tapping once, upgrades are:
+
+```bash
+brew update && brew upgrade meetscribe
+```
+
+Tap repo: [homebrew-meetscribe](https://github.com/NChang007/homebrew-meetscribe)
+
+**From source:**
 
 ```bash
 cd meetscribe
@@ -58,8 +82,6 @@ swift build -c release --disable-sandbox
 install -m 755 .build/release/meetscribe ~/.local/bin/meetscribe
 meetscribe init
 ```
-
-Homebrew: see `homebrew-meetscribe/`.
 
 ### Distribution signing
 
